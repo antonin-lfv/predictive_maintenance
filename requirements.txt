@@ -1,0 +1,3 @@
+pyod
+numpy
+matplotlib

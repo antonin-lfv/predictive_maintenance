@@ -1,0 +1,7 @@
+test.py
+# all pycache
+__pycache__/
+# all pyc files
+*.pyc
+# pycharm files
+.idea/
