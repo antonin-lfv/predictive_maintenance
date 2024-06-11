@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from pyod.utils.data import generate_data, generate_data_categorical, generate_data_clusters
 
 
@@ -19,7 +20,13 @@ class DataGenerator:
         # Generate cluster data
         >>> data_gen.generate_clusters(n_train=1000, n_test=500, n_clusters=2, n_features=2, contamination=0.1, size='same', density='same', dist=0.25, random_state=42)
         >>> data_gen.plot_data()
+
+        # Generate time series data
+        >>> data_gen.generate_time_series(n_samples=1000, n_anomalies=50, trend='linear', seasonality='sine', noise_level=0.1, random_state=42)
+        >>> data_gen.plot_data()
         """
+        self.time_series_labels = None
+        self.time_series = None
         self.X_train = None
         self.X_test = None
         self.y_train = None
@@ -48,6 +55,9 @@ class DataGenerator:
             offset=offset, behaviour=behaviour, random_state=random_state,
             n_nan=n_nan, n_inf=n_inf
         )
+        # reset the time series data
+        self.time_series = None
+        self.time_series_labels = None
 
     def generate_categorical(self, n_train=1000, n_test=500, n_features=2, n_informative=2,
                              n_category_in=2, n_category_out=2, contamination=0.1,
@@ -71,6 +81,9 @@ class DataGenerator:
             n_category_out=n_category_out, contamination=contamination,
             shuffle=shuffle, random_state=random_state
         )
+        # reset the time series data
+        self.time_series = None
+        self.time_series_labels = None
 
     def generate_clusters(self, n_train=1000, n_test=500, n_clusters=2, n_features=2,
                           contamination=0.1, size='same', density='same', dist=0.25,
@@ -95,6 +108,47 @@ class DataGenerator:
             size=size, density=density, dist=dist, random_state=random_state,
             return_in_clusters=return_in_clusters
         )
+        # reset the time series data
+        self.time_series = None
+        self.time_series_labels = None
+
+    def generate_time_series(self, n_samples=1000, n_anomalies=50, trend='linear',
+                             seasonality='sine', noise_level=0.1, random_state=None):
+        """
+        generate_time_series: Generates synthetic time series data with anomalies.
+            Parameters:
+            - n_samples: int (default=1000), Number of samples in the time series.
+            - n_anomalies: int (default=50), Number of anomalies to inject.
+            - trend: str (default='linear'), Type of trend ('linear', 'quadratic', or 'none').
+            - seasonality: str (default='sine'), Type of seasonality ('sine', 'cosine', or 'none').
+            - noise_level: float (default=0.1), Level of noise.
+            - random_state: int or None (default=None), Seed for random generator.
+        """
+        np.random.seed(random_state)
+        t = np.arange(n_samples)
+
+        if trend == 'linear':
+            trend_data = t * 0.05
+        elif trend == 'quadratic':
+            trend_data = 0.0005 * (t ** 2)
+        else:
+            trend_data = np.zeros(n_samples)
+
+        if seasonality == 'sine':
+            season_data = np.sin(t * 0.1) * 10
+        elif seasonality == 'cosine':
+            season_data = np.cos(t * 0.1) * 10
+        else:
+            season_data = np.zeros(n_samples)
+
+        noise = np.random.normal(0, noise_level, n_samples)
+
+        self.time_series = trend_data + season_data + noise
+        self.time_series_labels = np.zeros(n_samples)
+
+        anomaly_indices = np.random.choice(n_samples, n_anomalies, replace=False)
+        self.time_series[anomaly_indices] += np.random.uniform(15, 30, n_anomalies)
+        self.time_series_labels[anomaly_indices] = 1
 
     @staticmethod
     def help():
@@ -139,24 +193,43 @@ class DataGenerator:
             - dist: float (default=0.25), Distance between clusters.
             - random_state: int or None (default=None), Seed for random generator.
             - return_in_clusters: bool (default=False), Return clusters separately.
+        
+        generate_time_series: Generates synthetic time series data with anomalies.
+            Parameters:
+            - n_samples: int (default=1000), Number of samples in the time series.
+            - n_anomalies: int (default=50), Number of anomalies to inject.
+            - trend: str (default='linear'), Type of trend ('linear', 'quadratic', or 'none').
+            - seasonality: str (default='sine'), Type of seasonality ('sine', 'cosine', or 'none').
+            - noise_level: float (default=0.1), Level of noise.
+            - random_state: int or None (default=None), Seed for random generator.
 
         plot_data: Plots the generated data if it exists.
         """
         print(docstring)
 
     def plot_data(self):
-        if self.X_train is None or self.X_test is None:
-            print("No data to plot. Please generate data first.")
-            return
+        if self.time_series is not None:
+            plt.figure(figsize=(14, 6))
+            plt.plot(self.time_series, label='Time Series Data')
+            plt.scatter(np.where(self.time_series_labels == 1)[0], self.time_series[self.time_series_labels == 1],
+                        color='red', label='Anomalies', marker='x')
+            plt.title("Time Series Data with Anomalies")
+            plt.legend()
+            plt.show()
+        else:
+            if self.X_train is None or self.X_test is None:
+                print("No data to plot. Please generate data first.")
+                return
 
-        plt.figure(figsize=(14, 6))
+            plt.figure(figsize=(14, 6))
 
-        plt.subplot(1, 2, 1)
-        plt.scatter(self.X_train[:, 0], self.X_train[:, 1], c=self.y_train, cmap='viridis', marker='o', edgecolor='k')
-        plt.title("Training Data")
+            plt.subplot(1, 2, 1)
+            plt.scatter(self.X_train[:, 0], self.X_train[:, 1], c=self.y_train, cmap='viridis', marker='o',
+                        edgecolor='k')
+            plt.title("Training Data")
 
-        plt.subplot(1, 2, 2)
-        plt.scatter(self.X_test[:, 0], self.X_test[:, 1], c=self.y_test, cmap='viridis', marker='o', edgecolor='k')
-        plt.title("Test Data")
+            plt.subplot(1, 2, 2)
+            plt.scatter(self.X_test[:, 0], self.X_test[:, 1], c=self.y_test, cmap='viridis', marker='o', edgecolor='k')
+            plt.title("Test Data")
 
-        plt.show()
+            plt.show()

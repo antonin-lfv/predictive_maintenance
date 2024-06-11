@@ -16,3 +16,8 @@ data_gen.plot_data()
 data_gen.generate_clusters(n_train=1000, n_test=500, n_clusters=2, n_features=2, contamination=0.1, size='same',
                            density='same', dist=0.25, random_state=42)
 data_gen.plot_data()
+
+# Generate time series data
+data_gen.generate_time_series(n_samples=1000, n_anomalies=50, trend='linear', seasonality='sine', noise_level=0.1,
+                              random_state=42)
+data_gen.plot_data()
