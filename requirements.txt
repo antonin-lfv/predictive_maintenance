@@ -1,3 +1,7 @@
 pyod
 numpy
 matplotlib
+sklearn
+scikit-learn
+scipy
+plotly
